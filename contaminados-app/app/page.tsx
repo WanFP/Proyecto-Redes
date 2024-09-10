@@ -1,101 +1,226 @@
-import Image from "next/image";
+'use client'
+import { useState } from 'react';
+import React from 'react';
+
+const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [games, setGames] = useState<any[]>([]);
+  const [rounds, setRounds] = useState<any[]>([]);
+  const [playerName, setPlayerName] = useState<string>('');
+  const [gameName, setgameName] = useState<string>('');
+  const [password, setPassword] = useState<string>(''); 
+  const [message, setMessage] = useState<string>(''); 
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  // Solicitud GET para buscar partidas
+  const searchGames = async () => {
+    try {
+      const response = await fetch(`${API_URL}/games`);
+      const data = await response.json();
+      setGames(data.data);
+      setMessage('Partidas cargadas correctamente.');
+    } catch (error) {
+      console.error('Error buscando partidas', error);
+      setMessage('Error buscando partidas.');
+    }
+  };
+
+  // Solicitud POST para crear una nueva partida
+  const createGame = async () => {
+    if (!playerName || !password) {
+      setMessage('Por favor, ingrese su nombre y una contraseña.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/games`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: gameName,
+          owner: playerName,
+          password: password,
+        }),
+      });
+      const data = await response.json();
+      setMessage(`Partida creada con ID: ${data.data.id}`);
+    } catch (error) {
+      console.error('Error creando partida', error);
+      setMessage('Error creando la partida.');
+    }
+  };
+
+  // Solicitud PUT para unirse a una partida
+  const joinGame = async (gameId: string) => {
+    if (!playerName || !password) {
+      setMessage('Por favor, ingrese su nombre y la contraseña para unirse.');
+      return;
+    }
+
+    try {
+      await fetch(`${API_URL}/games/${gameId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          player: playerName,
+          password: password,
+        }),
+      });
+      setMessage(`Te has unido a la partida ${gameId}`);
+    } catch (error) {
+      console.error('Error uniéndote a la partida', error);
+      setMessage('Error al intentar unirse a la partida.');
+    }
+  };
+
+  // Solicitud GET para obtener las rondas de un juego
+  const getRounds = async (gameId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/games/${gameId}/rounds`);
+      const data = await response.json();
+      setRounds(data.data);
+      setMessage(`Rondas cargadas para la partida ${gameId}`);
+    } catch (error) {
+      console.error('Error cargando rondas', error);
+      setMessage('Error al cargar las rondas.');
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <h1 style={styles.title}>Acciones de Juego - contaminaDOS</h1>
+
+      <div style={styles.box}>
+        {/* Input para el nombre del jugador */}
+        <input
+          type="text"
+          placeholder="Tu nombre"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          style={styles.input}
+        />
+
+        {/* Input para la contraseña */}
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+        />
+
+        <input
+          type="text"
+          placeholder="Nombre de Partida"
+          value={gameName}
+          onChange={(e) => setgameName(e.target.value)}
+          style={styles.input}
+        />
+
+        {/* Botón para buscar partidas */}
+        <button onClick={searchGames} style={styles.button}>Buscar Partidas</button>
+
+        {/* Botón para crear una nueva partida */}
+        <button onClick={createGame} style={styles.button}>Crear Nueva Partida</button>
+      </div>
+
+      {/* Mostrar mensaje de feedback */}
+      {message && <div style={styles.message}>{message}</div>}
+
+      {/* Mostrar partidas encontradas */}
+      {games.length > 0 && (
+        <ul style={styles.list}>
+          {games.map((game) => (
+            <li key={game.id} style={styles.listItem}>
+              <div>
+                {game.name} - Estado: {game.status}
+              </div>
+              <div style={styles.buttonsContainer}>
+                {/* Botón para unirse a la partida */}
+                <button onClick={() => joinGame(game.id)} style={styles.button}>Unirse a esta partida</button>
+                {/* Botón para ver rondas */}
+                <button onClick={() => getRounds(game.id)} style={styles.button}>Ver Rondas</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Mostrar rondas de una partida */}
+      {rounds.length > 0 && (
+        <ul style={styles.list}>
+          {rounds.map((round, index) => (
+            <li key={index} style={styles.listItem}>
+              Ronda {index + 1}: Líder: {round.leader}, Estado: {round.status}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
+
+// Estilos en línea
+const styles: { [key: string]: React.CSSProperties } = {
+  container: {
+    padding: '20px',
+    fontFamily: 'Arial, sans-serif',
+  },
+  title: {
+    textAlign: 'center' as 'center',
+    color: '#333',
+  },
+  box: {
+    backgroundColor: '#f4f4f4',
+    padding: '20px',
+    margin: '20px 0',
+    borderRadius: '10px',
+    boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+    textAlign: 'center' as 'center',
+  },
+  input: {
+    padding: '10px',
+    marginBottom: '10px',
+    fontSize: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  button: {
+    padding: '10px 20px',
+    margin: '10px 5px',
+    fontSize: '16px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+  },
+  list: {
+    listStyleType: 'none',
+    padding: '0',
+  },
+  listItem: {
+    backgroundColor: '#f9f9f9',
+    padding: '10px',
+    margin: '10px 0',
+    borderRadius: '5px',
+    boxShadow: '0 0 5px rgba(0,0,0,0.1)',
+  },
+  buttonsContainer: {
+    marginTop: '10px',
+  },
+  message: {
+    marginTop: '20px',
+    padding: '10px',
+    backgroundColor: '#e7f3fe',
+    border: '1px solid #b3d4fc',
+    color: '#31708f',
+    borderRadius: '5px',
+    textAlign: 'center' as 'center',
+  },
+};
