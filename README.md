@@ -1,10 +1,7 @@
 # Proyecto-Redes
 
 Para correr el proyecto:
-```npm start``` ó ```npm run build```
-
-
-
+```npm run dev``` ó ```npm run build```
 Para detenerlo:
 ```Ctrl + C```
 
