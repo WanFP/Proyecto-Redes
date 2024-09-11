@@ -9,8 +9,45 @@ export default function Home() {
   const [rounds, setRounds] = useState<any[]>([]);
   const [playerName, setPlayerName] = useState<string>('');
   const [gameName, setgameName] = useState<string>('');
-  const [password, setPassword] = useState<string>(''); 
-  const [message, setMessage] = useState<string>(''); 
+  const [password, setPassword] = useState<string>('');
+  const [message, setMessage] = useState<string>('');
+  const [currentGameId, setCurrentGameId] = useState<string | null>(null); // Estado para guardar el ID del juego
+
+
+  const startGame = async () => {
+    if (!currentGameId) {
+      setMessage('No se ha unido a ninguna partida para iniciar.');
+      return;
+    }
+
+    if (!playerName || !password) {
+      setMessage('Por favor, ingrese su nombre y la contraseña para comenzar el juego.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/games/${currentGameId}/start`, {
+        method: 'HEAD',
+        headers: {
+          'Content-Type': 'application/json',
+          'player': playerName,
+          'password': password,
+        },
+      });
+
+      if (response.ok) {
+        setMessage(`Juego ${currentGameId} ha comenzado.`);
+      } else {
+        const errorMsg = response.headers.get('X-msg') || 'Error al comenzar el juego.';
+        setMessage(errorMsg);
+      }
+    } catch (error) {
+      console.error('Error comenzando el juego', error);
+      setMessage('Error al comenzar el juego.');
+    }
+  };
+
+
 
   // Solicitud GET para buscar partidas
   const searchGames = async () => {
@@ -27,11 +64,11 @@ export default function Home() {
 
   // Solicitud POST para crear una nueva partida
   const createGame = async () => {
-    if (!playerName || !password) {
-      setMessage('Por favor, ingrese su nombre y una contraseña.');
+    if (!playerName) {
+      setMessage('Por favor, ingrese su nombre');
       return;
     }
-
+    
     try {
       const response = await fetch(`${API_URL}/games`, {
         method: 'POST',
@@ -42,7 +79,7 @@ export default function Home() {
         body: JSON.stringify({
           name: gameName,
           owner: playerName,
-          password: password,
+          //password: password,
         }),
       });
       const data = await response.json();
@@ -54,6 +91,8 @@ export default function Home() {
   };
 
   // Solicitud PUT para unirse a una partida
+
+
   const joinGame = async (gameId: string) => {
     if (!playerName || !password) {
       setMessage('Por favor, ingrese su nombre y la contraseña para unirse.');
@@ -61,7 +100,7 @@ export default function Home() {
     }
 
     try {
-      await fetch(`${API_URL}/games/${gameId}/`, {
+      const response = await fetch(`${API_URL}/games/${gameId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -71,25 +110,52 @@ export default function Home() {
           password: password,
         }),
       });
-      setMessage(`Te has unido a la partida ${gameId}`);
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage(`Te has unido a la partida ${gameId}`);
+        setCurrentGameId(data.data.id); // Guardar el ID del juego en el estado
+      } else {
+        setMessage('Error al unirse a la partida.');
+      }
     } catch (error) {
       console.error('Error uniéndote a la partida', error);
       setMessage('Error al intentar unirse a la partida.');
     }
   };
 
+
   // Solicitud GET para obtener las rondas de un juego
   const getRounds = async (gameId: string) => {
+    if (!playerName || !password) {
+      setMessage('Por favor, ingrese su nombre y la contraseña para ver las rondas.');
+      return;
+    }
+
     try {
-      const response = await fetch(`${API_URL}/games/${gameId}/rounds`);
+      const response = await fetch(`${API_URL}/games/${gameId}/rounds`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'player': playerName, // Añadir el nombre del jugador en el header
+          'password': password, // Añadir la contraseña en el header
+        },
+      });
       const data = await response.json();
-      setRounds(data.data);
-      setMessage(`Rondas cargadas para la partida ${gameId}`);
+
+      if (response.ok) {
+        setRounds(data.data);
+        setMessage(`Rondas cargadas para la partida ${gameId}`);
+      } else {
+        setMessage(`Error: ${data.msg}`);
+      }
     } catch (error) {
       console.error('Error cargando rondas', error);
       setMessage('Error al cargar las rondas.');
     }
   };
+
 
   return (
     <div style={styles.container}>
@@ -128,6 +194,11 @@ export default function Home() {
         {/* Botón para crear una nueva partida */}
         <button onClick={createGame} style={styles.button}>Crear Nueva Partida</button>
       </div>
+      {/* Botón para iniciar */}
+      <button onClick={startGame} style={styles.button}>
+        Comenzar Juego
+      </button>
+
 
       {/* Mostrar mensaje de feedback */}
       {message && <div style={styles.message}>{message}</div>}
