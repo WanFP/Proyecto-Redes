@@ -19,3 +19,25 @@ Commit
 
 Push
 ```git push origin nombre Branch sin comillas```
+
+
+imports hechos
+
+```npm install react-router-dom  ```
+```npm install @types/react-router-dom```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```
+``` ```

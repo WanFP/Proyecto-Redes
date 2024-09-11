@@ -2,26 +2,144 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Definición de la paleta de colores */
 :root {
-  --background: #000000;
-  --foreground: #171717;
+  --color-background-light: #F9FAFB;
+  --color-foreground-light: #1F2937;
+  --color-primary-light: #3B82F6; /* Azul para elementos primarios */
+  --color-accent-light: #EC4899;  /* Rosa para acentos */
+
+  --color-background-dark: #111827;
+  --color-foreground-dark: #E5E7EB;
+  --color-primary-dark: #60A5FA;  /* Azul claro */
+  --color-accent-dark: #F472B6;   /* Rosa claro */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #000000;
+    --color-background: var(--color-background-dark);
+    --color-foreground: var(--color-foreground-dark);
+    --color-primary: var(--color-primary-dark);
+    --color-accent: var(--color-accent-dark);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-background: var(--color-background-light);
+    --color-foreground: var(--color-foreground-light);
+    --color-primary: var(--color-primary-light);
+    --color-accent: var(--color-accent-light);
   }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-size: 18px; /* Tamaño base accesible */
+  line-height: 1.6; /* Altura de línea para mejor legibilidad */
+  padding: 20px;
 }
 
+/* Mejoras en la accesibilidad de los enlaces */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover, a:focus {
+  color: var(--color-accent);
+  outline: none;
+}
+
+/* Ajustes generales para formularios */
+input, button {
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+input {
+  background-color: var(--color-background);
+  border-color: var(--color-primary);
+  color: var(--color-foreground);
+  width: 100%;
+}
+
+input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+button {
+  background-color: var(--color-primary);
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--color-accent);
+}
+
+/* Mejora en la accesibilidad de los botones */
+button:focus {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: 4px;
+}
+
+/* Equilibrio de texto con buena legibilidad */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* Tipografías y estilo de encabezados */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-foreground);
+  line-height: 1.3;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.75rem;
+  font-weight: 500;
+}
+
+p {
+  margin-bottom: 1rem;
+  color: var(--color-foreground);
+  font-size: 1.125rem; /* Texto más grande para mejor lectura */
+}
+
+/* Responsividad y accesibilidad en dispositivos móviles */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  p {
+    font-size: 1rem;
   }
 }
