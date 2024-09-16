@@ -1,15 +1,13 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; 
+import { useRouter } from 'next/navigation'; // Importa useRouter
 
 function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const navigate = useNavigate();  
-    
-
+  const router = useRouter();  // Inicializa useRouter para manejar redirecciones
 
   // Función para obtener el valor de una cookie
   const getCookie = (name: string) => {
@@ -28,47 +26,18 @@ function LoginPage() {
     e.preventDefault();
     
     // Valida si el usuario o contraseña son vacíos
-    if (!username || !password) {
+    if (!username) {
       setError('Por favor, ingrese el usuario y la contraseña');
       return;
     }
 
     try {
-
-               // Simulación del fetch comentada
-      /*
-      const response = await fetch('/api/Auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData),
-      });
-
-      const data = await response.json();
-
-      // Simulación de la validación de la respuesta
-      if (response.ok) {
-        const token = data.token;
-        const decodedToken = jwtDecode(token);
-        const roleKey = 'http://schemas.microsoft.com/ws/2008/06/identity/claims/role';
-
-        if (decodedToken[roleKey] && decodedToken[roleKey] === 'Admin') {
-          localStorage.setItem('username', username);  // Guardar el nombre de usuario
-          setIsLoggedIn(true);  // Indicar que ha iniciado sesión correctamente
-        } else {
-          setError('Solo los administradores pueden acceder');
-        }
-      } else {
-        setError('Nombre de usuario o contraseña incorrectos');
-      }
-      */
       // Simulación del inicio de sesión exitoso
-      if (username === 'admin' && password === 'password') {  
+      if (username.length > 0 /*&& password === 'password'*/) {  
         localStorage.setItem('username', username); // Guardar nombre de usuario en localStorage
         setCookie('sesion_iniciada', 'true', 7); // Crear cookie que dura 7 días
         setIsLoggedIn(true); // Marcar el inicio de sesión como exitoso
-        navigate('/games'); // Redirige a la página de juegos
+        router.push('/games'); // Redirige a la página de juegos
       } else {
         setError('Nombre de usuario o contraseña incorrectos');
       }
@@ -89,10 +58,10 @@ function LoginPage() {
     // Si está logueado, redirigir después de 1 segundo
     if (isLoggedIn) {
       setTimeout(() => {
-        navigate('/games'); // Redirige a la página de juegos
+        router.push('/games'); // Redirige a la página de juegos
       }, 1000);
     }
-  }, [isLoggedIn, navigate]);
+  }, [isLoggedIn, router]);
 
   return (
     <div>
@@ -116,6 +85,7 @@ function LoginPage() {
                 type="password"
                 id="password"
                 value={password}
+                disabled={true}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
