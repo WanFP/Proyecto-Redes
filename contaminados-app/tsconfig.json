@@ -21,6 +21,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/Components/games/Games.jsx", "app/Components/games/page.jsx", "app/Components/games/page.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/Components/games/Games.jsx", "app/Components/games/page.tsx", "app/Components/games/page.tsx"],
   "exclude": ["node_modules"]
 }
