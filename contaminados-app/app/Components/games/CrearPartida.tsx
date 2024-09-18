@@ -1,25 +1,27 @@
-'use client';
 import { useState } from 'react';
 import React from 'react';
+import { useUser } from './UserContext'; // Asegúrate de tener el contexto importado correctamente
 
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
 export default function CrearPartida({ setGameId }: { setGameId: (gameId: string) => void }) {
-    const [playerName, setPlayerName] = useState('');
+    const { username } = useUser(); // Obtener el nombre del usuario desde el contexto
     const [gameName, setGameName] = useState('');
     const [password, setPassword] = useState('');
     const [usePassword, setUsePassword] = useState(false); // Estado para controlar el uso de la contraseña
     const [message, setMessage] = useState('');
 
     const createGame = async () => {
-        if (!playerName || !gameName) {
+        console.log('Username:', username); // Para depuración
+        if (!username || !gameName) {
             setMessage('Por favor, ingrese su nombre y el nombre de la partida');
+            console.log(username);
             return;
         }
-
+       
         const gameData: any = {
             name: gameName,
-            owner: playerName,
+            owner: username, // Usamos el nombre del usuario desde el contexto
         };
 
         // Si la opción de usar contraseña está activa, añadirla a los datos
@@ -49,13 +51,6 @@ export default function CrearPartida({ setGameId }: { setGameId: (gameId: string
     return (
         <div>
             <h2 className="text-2xl font-bold mb-4">Crear Nueva Partida</h2>
-            <input
-                type="text"
-                placeholder="Tu nombre"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                className="block w-full p-2 mb-4 border rounded focus:outline-none focus:ring focus:ring-primary"
-            />
 
             <input
                 type="text"

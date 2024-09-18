@@ -1,42 +1,49 @@
 'use client';
 import { useState } from 'react';
+import { UserProvider, useUser } from './Components/games/UserContext'; // Asegúrate de importar correctamente
 import BuscarPartidas from './Components/games/BuscarPartidas';
-import CrearPartida from './Components/games/CrearPartida'; 
-import GameComponent from './Components/games/GameComponent'; 
+import CrearPartida from './Components/games/CrearPartida';
+import GameComponent from './Components/games/GameComponent';
 import LoginComponent from './Components/login/page';
 
 export default function App() {
-  const [step, setStep] = useState('login'); // Controla el paso del proceso
-  const [gameId, setGameId] = useState<string | null>(null); // Almacena el ID de la partida creada o seleccionada
- 
+  const [step, setStep] = useState('login');
+  const [gameId, setGameId] = useState<string | null>(null);
+
+  return (
+    <UserProvider> {/* Envolvemos todo el árbol en el UserProvider */}
+      <MainApp step={step} setStep={setStep} gameId={gameId} setGameId={setGameId} />
+    </UserProvider>
+  );
+}
+
+function MainApp({ step, setStep, gameId, setGameId }: any) {
+  const { username, setUsername } = useUser(); // Ahora useUser está dentro del UserProvider
 
   // Manejador para iniciar sesión
   const handleLogin = (username: string) => {
-    localStorage.setItem('username', username); 
-    setStep('select'); 
+    setUsername(username); // Guardar el nombre de usuario en el contexto
+    setStep('select');
   };
 
   // Seleccionar o crear una partida
   const handleGameSelection = (gameId: string) => {
     setGameId(gameId);
-    setStep('game'); 
+    setStep('game');
   };
 
-  // Regresar al paso anterior
   const handleBack = () => {
     if (step === 'game') {
-      setStep('select'); 
+      setStep('select');
     } else if (step === 'search' || step === 'create') {
-      setStep('select'); 
-    } 
+      setStep('select');
+    }
   };
 
   return (
     <div className="p-6">
       {/* Paso de Login */}
-      {step === 'login' && (
-        <LoginComponent onLogin={handleLogin} />
-      )}
+      {step === 'login' && <LoginComponent onLogin={handleLogin} />}
 
       {/* Paso de selección de partida (Buscar o Crear) */}
       {step === 'select' && (
@@ -54,7 +61,6 @@ export default function App() {
           >
             Crear Partida
           </button>
-        
         </div>
       )}
 
@@ -99,5 +105,3 @@ export default function App() {
     </div>
   );
 }
-
-

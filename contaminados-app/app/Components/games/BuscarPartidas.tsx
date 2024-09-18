@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import React from 'react';
+import { useUser } from './UserContext'; // Importar el hook para usar el contexto
 
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
@@ -11,30 +12,19 @@ interface Game {
     id: string;
     name: string;
     status: string;
-    password: boolean; // Esta propiedad indica si la partida requiere contraseña o no
+    password: boolean; 
 }
 
 export default function BuscarPartidas({ setGameId }: { setGameId: (gameId: string) => void }) {
+    const { username } = useUser(); // Obtener el nombre del usuario desde el contexto
     const [games, setGames] = useState<Game[]>([]);
     const [message, setMessage] = useState('');
-    const [password, setPassword] = useState(''); // Controlar la contraseña ingresada
-    const [playerName, setPlayerName] = useState<string | null>(null); // Nombre del jugador desde localStorage
-
-    // Obtener el nombre del jugador desde localStorage cuando se carga el componente
-    useEffect(() => {
-        const storedUsername = localStorage.getItem('username');
-        if (storedUsername) {
-            setPlayerName(storedUsername);
-        } else {
-            setMessage('No se encontró el nombre de usuario en localStorage.');
-        }
-    }, []);
+    const [password, setPassword] = useState(''); 
 
     const searchGames = async () => {
         try {
             const response = await fetch(`${API_URL}/games`);
             const data = await response.json();
-
             setGames(data.data as Game[]);
             setMessage('Partidas cargadas correctamente.');
         } catch (error) {
@@ -44,7 +34,7 @@ export default function BuscarPartidas({ setGameId }: { setGameId: (gameId: stri
     };
 
     const joinGame = async (gameId: string, requiresPassword: boolean) => {
-        if (!playerName) {
+        if (!username) {
             setMessage('No se encontró el nombre del jugador.');
             return;
         }
@@ -61,8 +51,8 @@ export default function BuscarPartidas({ setGameId }: { setGameId: (gameId: stri
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    player: playerName,
-                    password: requiresPassword ? password : '', // Si no requiere contraseña, enviamos un string vacío
+                    player: username, // Usar el nombre de usuario del contexto
+                    password: requiresPassword ? password : '',
                 }),
             });
 
@@ -84,7 +74,6 @@ export default function BuscarPartidas({ setGameId }: { setGameId: (gameId: stri
         <div>
             <h2 className="text-2xl font-bold mb-4">Buscar Partidas</h2>
 
-           
             <button
                 onClick={searchGames}
                 className="w-full bg-primary text-white p-2 rounded mb-4 hover:bg-accent transition"
@@ -102,7 +91,6 @@ export default function BuscarPartidas({ setGameId }: { setGameId: (gameId: stri
                                 {game.name} - Estado: {game.status}
                             </div>
 
-                            {/* mostrar campo de contraseña si la partida lo pide */}
                             {game.password && (
                                 <input
                                     type="password"
