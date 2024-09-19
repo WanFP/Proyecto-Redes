@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Key, useEffect, useState } from 'react';
 import { useUser } from './UserContext'; // Importa el UserContext
 
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
@@ -197,6 +197,9 @@ export default function GameComponent({ gameId }: { gameId: string }) {
   // Función para votar a favor o en contra del grupo propuesto
   const voteForGroup = async (vote: boolean) => {
     try {
+
+      console.log("Jugaodres seleccionados en voto:" + selectedPlayers + "y si este usuario es valido: " + isPlayerInGroup);
+
       const response = await fetch(`${API_URL}/games/${gameId}/rounds/${round?.id}`, {
         method: 'POST',
         headers: {
@@ -230,25 +233,30 @@ export default function GameComponent({ gameId }: { gameId: string }) {
   }, [password, gameId]);
 
   useEffect(() => {
-    // Verificar si los datos del juego están cargados y si la ronda es válida
     if (game && game.currentRound && game.currentRound !== '0000000000000000000000000') {
       // Si la ronda actual es diferente a la almacenada, actualizar la ronda
-      setCanStart(false);
       if (!round || round.id !== game.currentRound) {
         fetchRoundData(game.currentRound);
       }
     }
 
-    // Verificar si el jugador está en el grupo propuesto solo si tenemos los datos de la ronda
-    if (round) {
-      setIsPlayerInGroup(round.group.includes(username));
+    // Verifica si los datos de la ronda y del jugador están cargados antes de ejecutar la verificación
+    if (round && round.group && username) {
+      // Registrar un log para depurar
+      console.log(`Verificando si el jugador ${username} está en el grupo:`, round.group);
+
+      const playerInGroup = round.group.includes(username);
+
+      console.log(`Resultado de la verificación: ${playerInGroup}`);
+      setIsPlayerInGroup(playerInGroup);
     }
 
     // Verificar si el jugador es enemigo solo si tenemos los datos del juego
-    if (game) {
+    if (game && game.enemies && username) {
       setIsEnemy(game.enemies.includes(username));
     }
-  }, [game?.currentRound, round?.id, username]);
+  }, [game, round, username]);
+
 
 
 
@@ -366,7 +374,7 @@ export default function GameComponent({ gameId }: { gameId: string }) {
             </div>
           )}
 
-          {isPlayerInGroup && (
+          {isPlayerInGroup && round?.status == 'waiting-on-group' && (
             <>
               <button
                 onClick={() => submitAction(true)} // Colaborar
@@ -392,11 +400,16 @@ export default function GameComponent({ gameId }: { gameId: string }) {
           {round?.status === 'voting' && (
             <div className="mt-4">
               <h2 className="text-2xl font-bold">Votaciones:</h2>
-              <p>{round.votes ? round.votes.map((vote, index) => (
-                <span key={index}>{vote ? 'A favor' : 'En contra'}, </span>
-              )) : 'No hay votos registrados aún.'}</p>
+              {Array.isArray(round.votes) && round.votes.length > 0 ? (
+                round.votes.map((vote: any, index: Key | null | undefined) => (
+                  <span key={index}>{vote ? 'A favor' : 'En contra'}, </span>
+                ))
+              ) : (
+                <p>No hay votos registrados aún.</p>
+              )}
             </div>
           )}
+
 
           {/* Mostrar botón para iniciar el juego si el jugador actual es el owner y se puede iniciar el juego */}
           {game.owner === username && canStart && (
