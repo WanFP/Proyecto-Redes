@@ -1,6 +1,6 @@
 'use client';
 import { Key, useEffect, useState } from 'react';
-import { useUser } from './UserContext'; 
+import { useUser } from './UserContext';
 
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
@@ -12,14 +12,14 @@ interface GameData {
   enemies: string[];
   currentRound: string;
   password: boolean;
-  owner: string; 
+  owner: string;
 }
 
 interface RoundData {
   id: string;
   leader: string;
   status: string;
-  group: string[]; 
+  group: string[];
   result: string;
 }
 
@@ -181,21 +181,19 @@ export default function GameComponent({ gameId }: { gameId: string }) {
               currentRound: data.data.currentRound,
               password: data.data.password,
               owner: data.data.owner,
+              
             };
+
+
           }
           return prevGame; // Si no hay cambios, no se actualiza el estado
         });
 
-
-        if (game && game.status === 'ended') {
-          console.log(data.data.result);
-          if (data.data.result === 'citizens') {
-            setWinnerMessage('¡Los Ciudadanos han ganado!');
-          } else {
-            setWinnerMessage('¡Los Enemigos han ganado!');
-          }
-        }
         
+          
+        
+
+
 
         const numPlayers = data.data.players.length;
         setCanStart(numPlayers >= MIN_PLAYERS && numPlayers <= MAX_PLAYERS && data.data.status === "lobby");
@@ -247,9 +245,9 @@ export default function GameComponent({ gameId }: { gameId: string }) {
 
         // Actualizar las victorias de ciudadanos o enemigos
         if (roundData.data.result === 'citizens') {
-          setCitizensWins((prev) => prev + 1);
+          setWinnerMessage("Ganaron los ciudadanos");
         } else if (roundData.data.result === 'enemies') {
-          setEnemiesWins((prev) => prev + 1);
+          setWinnerMessage("Ganaron los enemigos");
         }
       } else {
         setMessage(roundData.msg || 'Error al cargar los datos de la ronda.');
@@ -448,7 +446,7 @@ export default function GameComponent({ gameId }: { gameId: string }) {
           )}
 
 
-          {round?.leader === username && selectedPlayers.length > 0 && !teamProposed && (
+          {round?.leader === username && selectedPlayers.length > 0 &&(
             <>
 
               <button
