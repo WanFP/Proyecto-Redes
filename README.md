@@ -27,9 +27,11 @@ imports hechos
 ```npm install @types/react-router-dom```
 ``` ```
 ``` ```
-``` ```
-``` ```
-``` ```
+
+Certificados
+```npm install express http https fs path    ```
+``` openssl req -nodes -new -x509 -keyout server.key -out server.cert   ```
+```openssl req -nodes -new -x509 -keyout server.key -out server.cert ```
 ``` ```
 ``` ```
 ``` ```
