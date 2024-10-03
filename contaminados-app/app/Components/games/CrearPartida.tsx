@@ -5,9 +5,9 @@ import { useUser } from './UserContext'; // Asegúrate de tener el contexto impo
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
 export default function CrearPartida({ setGameId }: { setGameId: (gameId: string) => void }) {
-    const { username } = useUser(); // Obtener el nombre del usuario desde el contexto
+    const { username, setPassword, setRequiresPassword } = useUser(); // Obtener y actualizar datos del contexto
     const [gameName, setGameName] = useState('');
-    const [password, setPassword] = useState('');
+    const [localPassword, setLocalPassword] = useState(''); // Contraseña local
     const [usePassword, setUsePassword] = useState(false); // Estado para controlar el uso de la contraseña
     const [message, setMessage] = useState('');
 
@@ -18,15 +18,15 @@ export default function CrearPartida({ setGameId }: { setGameId: (gameId: string
             console.log(username);
             return;
         }
-       
+
         const gameData: any = {
             name: gameName,
             owner: username, // Usamos el nombre del usuario desde el contexto
         };
 
         // Si la opción de usar contraseña está activa, añadirla a los datos
-        if (usePassword && password) {
-            gameData.password = password;
+        if (usePassword && localPassword) {
+            gameData.password = localPassword;
         }
 
         try {
@@ -38,10 +38,21 @@ export default function CrearPartida({ setGameId }: { setGameId: (gameId: string
                 },
                 body: JSON.stringify(gameData),
             });
+
             const data = await response.json();
-            setMessage(`Partida creada con ID: ${data.data.id}`);
-            console.log('Partida creada correctamente:', data.data.id); // Verificación
-            setGameId(data.data.id);
+
+            if (response.ok) {
+                setMessage(`Partida creada con éxito. ID: ${data.data.id}`);
+                setGameId(data.data.id);
+
+                // Guardar la información de la contraseña y si es requerida en el contexto
+                setRequiresPassword(usePassword); // Guardar si la partida requiere contraseña
+                if (usePassword) {
+                    setPassword(localPassword); // Guardar la contraseña en el contexto si es necesaria
+                }
+            } else {
+                setMessage(`Error al crear la partida: ${data.msg || 'Desconocido'}`);
+            }
         } catch (error) {
             console.error('Error creando partida', error);
             setMessage('Error creando la partida.');
@@ -77,8 +88,8 @@ export default function CrearPartida({ setGameId }: { setGameId: (gameId: string
                 <input
                     type="password"
                     placeholder="Contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={localPassword}
+                    onChange={(e) => setLocalPassword(e.target.value)}
                     className="block w-full p-2 mb-4 border rounded focus:outline-none focus:ring focus:ring-primary"
                 />
             )}

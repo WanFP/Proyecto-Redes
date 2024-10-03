@@ -11,9 +11,10 @@ export default function App() {
   const [gameId, setGameId] = useState<string | null>(null);
 
   return (
-    <UserProvider> {/* Envolvemos todo el árbol en el UserProvider */}
-      <MainApp step={step} setStep={setStep} gameId={gameId} setGameId={setGameId} />
-    </UserProvider>
+    <UserProvider>
+  <MainApp step={step} setStep={setStep} gameId={gameId} setGameId={setGameId} />
+</UserProvider>
+
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 import { Key, useEffect, useState } from 'react';
-import { useUser } from './UserContext'; // Importa el UserContext
+import { useUser } from './UserContext'; 
 
 const API_URL = 'https://contaminados.akamai.meseguercr.com/api';
 
@@ -12,40 +12,65 @@ interface GameData {
   enemies: string[];
   currentRound: string;
   password: boolean;
-  owner: string; // Agregamos el owner
+  owner: string; 
 }
 
 interface RoundData {
   id: string;
   leader: string;
   status: string;
-  group: string[]; // Grupo propuesto por el líder
+  group: string[]; 
+  result: string;
 }
 
 export default function GameComponent({ gameId }: { gameId: string }) {
-  const { username } = useUser(); // Obtener el nombre del usuario desde el contexto
+  const { username, password, requiresPassword } = useUser(); // Obtener datos del contexto
   const [game, setGame] = useState<GameData | null>(null);
   const [round, setRound] = useState<RoundData | null>(null);
   const [message, setMessage] = useState('');
-  const [password, setPassword] = useState(''); // Almacenar la contraseña si aplica
   const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]); // Jugadores seleccionados para el equipo
   const [canStart, setCanStart] = useState(false); // Verificar si se puede iniciar el juego
   const [actionSent, setActionSent] = useState(false); // Para controlar si el jugador ya envió su acción
+  const [hasVoted, setHasVoted] = useState(false); // Para controlar si el jugador ya ha votado
   const [isEnemy, setIsEnemy] = useState(false); // Para controlar si el jugador es un enemigo
   const [isPlayerInGroup, setIsPlayerInGroup] = useState(false); // Para verificar si el jugador está en el grupo
+  const [citizensWins, setCitizensWins] = useState(0); // Contador para los ciudadanos
+  const [enemiesWins, setEnemiesWins] = useState(0); // Contador para los enemigos
+  const [currentRoundNumber, setCurrentRoundNumber] = useState(0); // Número de la ronda actual
+  const [teamProposed, setTeamProposed] = useState(false);
+  const [currentRoundId, setCurrentRoundId] = useState<string | null>(null);
+  const [winnerMessage, setWinnerMessage] = useState<string | null>(null);
+
+
+
+  const playerDistribution: Record<number, Record<number, number>> = {
+    5: { 1: 2, 2: 3, 3: 2, 4: 3, 5: 3 },
+    6: { 1: 2, 2: 3, 3: 3, 4: 4, 5: 4 },
+    7: { 1: 2, 2: 3, 3: 3, 4: 4, 5: 5 },
+    8: { 1: 3, 2: 4, 3: 4, 4: 5, 5: 5 },
+    9: { 1: 3, 2: 4, 3: 4, 4: 5, 5: 5 },
+    10: { 1: 3, 2: 4, 3: 4, 4: 5, 5: 5 },
+  };
+
 
 
   const MIN_PLAYERS = 5;
   const MAX_PLAYERS = 10;
 
-  const submitAction = async (action: boolean) => {//Cuando es parte del equipo sabotea o colabora
+  const submitAction = async (action: boolean) => {
     try {
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'player': username || '',
+      };
+
+      if (requiresPassword && password) {
+        headers['password'] = password;
+      }
+
       const response = await fetch(`${API_URL}/games/${gameId}/rounds/${round?.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'player': username || '',
-        },
+        headers: headers,
         body: JSON.stringify({ action }), // Enviar true para colaborar, false para sabotear
       });
 
@@ -66,17 +91,25 @@ export default function GameComponent({ gameId }: { gameId: string }) {
   // Función para que el líder proponga un equipo
   const proposeTeam = async () => {
     try {
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'player': username || '',
+      };
+
+      // Añadir la contraseña si la partida la requiere
+      if (requiresPassword && password) {
+        headers['password'] = password;
+      }
+
       const response = await fetch(`${API_URL}/games/${gameId}/rounds/${round?.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'player': username || '',
-        },
+        headers: headers,
         body: JSON.stringify({ group: selectedPlayers }),
       });
 
       if (response.ok) {
         setMessage('Equipo propuesto correctamente.');
+        setTeamProposed(true);
         fetchRoundData(round?.id || ''); // Actualizamos los datos de la ronda
       } else {
         setMessage('Error al proponer el equipo.');
@@ -87,50 +120,86 @@ export default function GameComponent({ gameId }: { gameId: string }) {
     }
   };
 
+  const getPlayersToPropose = () => {
+    if (!game || !game.players.length) {
+      return 'No disponible';
+    }
+
+    const numPlayers = game.players.length;
+
+    // Obtener los valores de las rondas para la cantidad de jugadores actual No funciona
+    if (playerDistribution[numPlayers]) {
+      const rounds = Object.values(playerDistribution[numPlayers]);
+      return `Debes seleccionar en las rondas: ${rounds.join(', ')}`;
+    }
+
+    return 'No disponible';
+  };
+
+
+
+
+
   // Fetch para obtener los datos del juego
   const fetchGameData = async () => {
     if (!username) {
       setMessage('No se ha encontrado el nombre de usuario.');
       return;
     }
+
     try {
       const headers: any = {
         'player': username, // Usamos el nombre del jugador desde el contexto
       };
 
-
-
-      if (password) {
+      if (requiresPassword && password) {
         headers['password'] = password;
       }
+
       const response = await fetch(`${API_URL}/games/${gameId}`, {
         method: 'GET',
         headers: headers,
       });
+
       const data = await response.json();
 
-
-
       if (data.status === 200) {
-        // Si la lista de jugadores cambia, actualiza el estado
-        if (!game || JSON.stringify(game.players) !== JSON.stringify(data.data.players)) {
-          setGame({
-            id: data.data.id,
-            name: data.data.name,
-            status: data.data.status,
-            players: data.data.players,
-            enemies: data.data.enemies,
-            currentRound: data.data.currentRound,
-            password: data.data.password,
-            owner: data.data.owner,
-          });
+        setGame((prevGame) => {
+          // Verificar si ha cambiado la lista de jugadores o el estado del juego
+          if (
+            !prevGame ||
+            JSON.stringify(prevGame.players) !== JSON.stringify(data.data.players) ||
+            prevGame.status !== data.data.status ||
+            prevGame.currentRound !== data.data.currentRound
+          ) {
+            return {
+              id: data.data.id,
+              name: data.data.name,
+              status: data.data.status,
+              players: data.data.players,
+              enemies: data.data.enemies,
+              currentRound: data.data.currentRound,
+              password: data.data.password,
+              owner: data.data.owner,
+            };
+          }
+          return prevGame; // Si no hay cambios, no se actualiza el estado
+        });
+
+
+        if (game && game.status === 'ended') {
+          console.log(data.data.result);
+          if (data.data.result === 'citizens') {
+            setWinnerMessage('¡Los Ciudadanos han ganado!');
+          } else {
+            setWinnerMessage('¡Los Enemigos han ganado!');
+          }
         }
+        
 
-        // Comprueba si el número de jugadores está dentro del rango permitido
         const numPlayers = data.data.players.length;
-        setCanStart(numPlayers >= MIN_PLAYERS && numPlayers <= MAX_PLAYERS);
+        setCanStart(numPlayers >= MIN_PLAYERS && numPlayers <= MAX_PLAYERS && data.data.status === "lobby");
 
-        // Solo hacer la solicitud de rounds si el juego está iniciado
         if (data.data.currentRound !== '0000000000000000000000000') {
           fetchRoundData(data.data.currentRound);
         }
@@ -143,28 +212,47 @@ export default function GameComponent({ gameId }: { gameId: string }) {
     }
   };
 
-  // Fetch para obtener los datos de la ronda
+
+
+
+
   const fetchRoundData = async (roundId: string) => {
     try {
       const headers: any = {
-        'player': username, // Usamos el nombre del jugador desde el contexto
+        'player': username,
       };
+
+      if (requiresPassword && password) {
+        headers['password'] = password;
+      }
 
       const response = await fetch(`${API_URL}/games/${gameId}/rounds/${roundId}`, {
         method: 'GET',
         headers: headers,
       });
-      const data = await response.json();
 
-      if (data.status === 200) {
-        setRound({
-          id: data.data.id,
-          leader: data.data.leader,
-          status: data.data.status,
-          group: data.data.group || [],
-        });
+      const roundData = await response.json();
+
+      if (roundData.status === 200) {
+        // Verificar si el roundId ha cambiado, solo actualizar si es una nueva ronda
+        if (roundData.data.id !== currentRoundId) {
+          setRound(roundData.data);
+          setCurrentRoundId(roundData.data.id); // Actualizamos el currentRoundId
+
+
+          // Resetear votos y acciones si hay cambio de ronda
+          setHasVoted(false);
+          setActionSent(false);
+        }
+
+        // Actualizar las victorias de ciudadanos o enemigos
+        if (roundData.data.result === 'citizens') {
+          setCitizensWins((prev) => prev + 1);
+        } else if (roundData.data.result === 'enemies') {
+          setEnemiesWins((prev) => prev + 1);
+        }
       } else {
-        setMessage(data.msg || 'Error al cargar los datos de la ronda.');
+        setMessage(roundData.msg || 'Error al cargar los datos de la ronda.');
       }
     } catch (error) {
       console.error('Error al cargar los datos de la ronda', error);
@@ -172,19 +260,27 @@ export default function GameComponent({ gameId }: { gameId: string }) {
     }
   };
 
-  // Función para que el owner inicie el juego con HEAD
+
+
   const startGame = async () => {
     try {
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'player': username || '',
+      };
+
+      if (requiresPassword && password) {
+        headers['password'] = password;
+      }
+
       const response = await fetch(`${API_URL}/games/${gameId}/start`, {
-        method: 'HEAD', // Cambiamos a HEAD
-        headers: {
-          'Content-Type': 'application/json',
-          'player': username || '',
-        },
+        method: 'HEAD',
+        headers: headers,
       });
 
       if (response.ok) {
         setMessage('El juego ha comenzado.');
+        setGame((prevGame) => prevGame ? { ...prevGame, status: 'started' } : prevGame);
       } else {
         setMessage('Error al iniciar el juego.');
       }
@@ -194,23 +290,30 @@ export default function GameComponent({ gameId }: { gameId: string }) {
     }
   };
 
-  // Función para votar a favor o en contra del grupo propuesto
+
+
+
+
   const voteForGroup = async (vote: boolean) => {
     try {
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'player': username || '',
+      };
 
-      console.log("Jugaodres seleccionados en voto:" + selectedPlayers + "y si este usuario es valido: " + isPlayerInGroup);
+      if (requiresPassword && password) {
+        headers['password'] = password;
+      }
 
       const response = await fetch(`${API_URL}/games/${gameId}/rounds/${round?.id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'player': username || '',
-        },
+        headers: headers,
         body: JSON.stringify({ vote }),
       });
 
       if (response.ok) {
         setMessage('Votaste correctamente.');
+        setHasVoted(true); // Marcar que el jugador ya ha votado
         fetchRoundData(round?.id || ''); // Actualizamos los datos de la ronda
       } else {
         setMessage('Error al votar por el equipo.');
@@ -220,44 +323,6 @@ export default function GameComponent({ gameId }: { gameId: string }) {
       setMessage('Error al votar por el equipo.');
     }
   };
-
-
-  useEffect(() => {
-    fetchGameData(); //primera solicitud de juego 
-
-    // Intervalo para hacer la solicitud cada 5 segundos
-    const intervalId = setInterval(fetchGameData, 5000);
-
-    // Limpiamos el intervalo cuando el componente se desmonta
-    return () => clearInterval(intervalId);
-  }, [password, gameId]);
-
-  useEffect(() => {
-    if (game && game.currentRound && game.currentRound !== '0000000000000000000000000') {
-      // Si la ronda actual es diferente a la almacenada, actualizar la ronda
-      if (!round || round.id !== game.currentRound) {
-        fetchRoundData(game.currentRound);
-      }
-    }
-
-    // Verifica si los datos de la ronda y del jugador están cargados antes de ejecutar la verificación
-    if (round && round.group && username) {
-      // Registrar un log para depurar
-      console.log(`Verificando si el jugador ${username} está en el grupo:`, round.group);
-
-      const playerInGroup = round.group.includes(username);
-
-      console.log(`Resultado de la verificación: ${playerInGroup}`);
-      setIsPlayerInGroup(playerInGroup);
-    }
-
-    // Verificar si el jugador es enemigo solo si tenemos los datos del juego
-    if (game && game.enemies && username) {
-      setIsEnemy(game.enemies.includes(username));
-    }
-  }, [game, round, username]);
-
-
 
 
 
@@ -271,11 +336,44 @@ export default function GameComponent({ gameId }: { gameId: string }) {
     });
   };
 
+  useEffect(() => {
+    fetchGameData(); // Cargar los datos del juego cuando el componente se monta
+
+    // Intervalo para actualizar los datos del juego cada 5 segundos
+    const intervalId = setInterval(() => {
+      fetchGameData();
+    }, 5000);
+
+    // Limpiar el intervalo cuando el componente se desmonta
+    return () => clearInterval(intervalId);
+  }, [password, gameId, username]); // Dependencias de la contraseña, ID del juego y nombre de usuario
+
+
+  useEffect(() => {
+    if (game && game.currentRound && game.currentRound !== '0000000000000000000000000') {
+      if (!round || round.id !== game.currentRound) {
+        fetchRoundData(game.currentRound);
+        setTeamProposed(false);
+      }
+    }
+
+    if (round && round.group && username) {
+      const playerInGroup = round.group.includes(username);
+      setIsPlayerInGroup(playerInGroup);
+    }
+
+    if (game && game.enemies && username) {
+      setIsEnemy(game.enemies.includes(username));
+    }
+  }, [game, round, username]);
+
+
+
+
   return (
     <div className="p-6">
       <h1 className="text-3xl font-bold text-primary mb-6">Partida: {game?.name}</h1>
 
-      {message && <div className="p-4 bg-blue-100 text-blue-800 rounded mb-4">{message}</div>}
 
       {username && (
         <div className="mb-4">
@@ -283,17 +381,9 @@ export default function GameComponent({ gameId }: { gameId: string }) {
           <p>{username}</p>
         </div>
       )}
-
-      {game?.password && !password && (
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold">Ingresa la contraseña del juego</h2>
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="block w-full p-2 mb-4 border rounded focus:outline-none focus:ring focus:ring-primary"
-          />
+      {winnerMessage && (
+        <div className="p-4 bg-green-100 text-green-800 rounded mb-4">
+          {winnerMessage}
         </div>
       )}
 
@@ -306,22 +396,23 @@ export default function GameComponent({ gameId }: { gameId: string }) {
 
           <div className="mb-4">
             <h2 className="text-2xl font-bold">Líder de la ronda</h2>
-            <p>{round?.leader || 'No se ha asignado líder aún'}</p> {/* Mostrar el líder */}
+            <p>{round?.leader || 'No se ha asignado líder aún'}</p>
           </div>
-
 
           {round?.group.length > 0 && (
             <div className="mb-4">
               <h2 className="text-2xl font-bold">Grupo Propuesto</h2>
               <ul className="list-none p-0">
                 {round.group.map((player) => (
-                  <li key={player} className="p-4 bg-gray-100 rounded mb-4 shadow">
+                  <li key={player} className="p-4 bg-gray-100 rounded mb-4 shadow" style={{ color: 'black' }}>
                     {player}
                   </li>
-                ))}
+                ))
+                }
               </ul>
             </div>
           )}
+          {message && <div className="p-4 bg-blue-100 text-blue-800 rounded mb-4">{message}</div>}
 
           <div className="mb-4">
             <h2 className="text-2xl font-bold">Jugadores ({game.players.length})</h2>
@@ -332,7 +423,6 @@ export default function GameComponent({ gameId }: { gameId: string }) {
                     {player}
                   </div>
 
-                  {/* Si el jugador actual es el líder, puede seleccionar jugadores */}
                   {round?.leader === username && (
                     <div>
                       <input
@@ -340,24 +430,38 @@ export default function GameComponent({ gameId }: { gameId: string }) {
                         checked={selectedPlayers.includes(player)}
                         onChange={() => handlePlayerSelection(player)}
                       />
-                      <span className="ml-2">Seleccionar para el equipo</span>
+                      <span className="ml-2" style={{ color: 'black' }}>Seleccionar para el equipo</span>
                     </div>
                   )}
                 </li>
               ))}
             </ul>
           </div>
-          {/* Mostrar botón para proponer el equipo si el jugador actual es el líder */}
-          {round?.leader === username && selectedPlayers.length > 0 && (
-            <button
-              onClick={proposeTeam}
-              className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-700 transition"
-            >
-              Proponer Equipo
-            </button>
+
+
+          {round?.leader === username && !teamProposed && (
+
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold">Jugadores a Proponer</h2>
+              <p>{getPlayersToPropose() ? ` ${getPlayersToPropose()} ` : 'No disponible'}</p>
+            </div>
           )}
 
-          {round?.group.length > 0 && (
+
+          {round?.leader === username && selectedPlayers.length > 0 && !teamProposed && (
+            <>
+
+              <button
+                onClick={proposeTeam}
+                className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-700 transition"
+              >
+                Proponer Equipo
+              </button>
+            </>
+
+          )}
+
+          {round?.status === 'voting' && (
             <div className="flex space-x-4">
               <button
                 onClick={() => voteForGroup(true)}
@@ -374,10 +478,11 @@ export default function GameComponent({ gameId }: { gameId: string }) {
             </div>
           )}
 
-          {isPlayerInGroup && round?.status == 'waiting-on-group' && (
+
+          {isPlayerInGroup && round?.status === 'waiting-on-group' && (
             <>
               <button
-                onClick={() => submitAction(true)} // Colaborar
+                onClick={() => submitAction(true)}
                 className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-700 transition"
               >
                 Colaborar
@@ -385,7 +490,7 @@ export default function GameComponent({ gameId }: { gameId: string }) {
 
               {isEnemy && (
                 <button
-                  onClick={() => submitAction(false)} // Sabotear
+                  onClick={() => submitAction(false)}
                   className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-700 transition"
                 >
                   Sabotear
@@ -394,25 +499,7 @@ export default function GameComponent({ gameId }: { gameId: string }) {
             </>
           )}
 
-
-
-
-          {round?.status === 'voting' && (
-            <div className="mt-4">
-              <h2 className="text-2xl font-bold">Votaciones:</h2>
-              {Array.isArray(round.votes) && round.votes.length > 0 ? (
-                round.votes.map((vote: any, index: Key | null | undefined) => (
-                  <span key={index}>{vote ? 'A favor' : 'En contra'}, </span>
-                ))
-              ) : (
-                <p>No hay votos registrados aún.</p>
-              )}
-            </div>
-          )}
-
-
-          {/* Mostrar botón para iniciar el juego si el jugador actual es el owner y se puede iniciar el juego */}
-          {game.owner === username && canStart && (
+          {game.owner === username && canStart && game.status === 'lobby' && (
             <button
               onClick={startGame}
               className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700 transition"
@@ -420,6 +507,9 @@ export default function GameComponent({ gameId }: { gameId: string }) {
               Iniciar Juego
             </button>
           )}
+
+
+
         </>
       )}
     </div>
